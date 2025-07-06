@@ -64,7 +64,7 @@ Choose one of these options for generating embeddings:
 docker run -p 6333:6333 qdrant/qdrant
 ```
 
-**Using Docker Compose:**
+**Using Basic Docker Compose:**
 
 ```yaml
 version: '3.8'
@@ -78,6 +78,62 @@ services:
 volumes:
   qdrant_storage:
 ```
+
+**Using Advanced Docker Compose**
+
+If you'd like to combine everything into a single docker compose file that runs a comatible model 
+and qdrant in a repeatable way, you can use the following docker compose file with docker 4.40 and later:
+
+```yaml
+
+
+services:
+  qdrant:
+    depends_on:
+      - mxbai-embed-large
+    image: qdrant/qdrant:latest
+    container_name: qdrant-codeindex
+    restart: unless-stopped
+    ports:
+      - "6333:6333"      # REST API
+      - "6334:6334"      # gRPC API (optional)
+    volumes:
+      # Mount host directory to Qdrant's data directory
+      - aistuff/qdrantcodeindex:/qdrant/storage
+    environment:
+      # Optional: Configure Qdrant settings
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      # Enable CORS if needed for web applications
+      - QDRANT__SERVICE__ENABLE_CORS=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Optional: resource limits
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+
+models:
+  mxbai-embed-large:
+    model: ai/mxbai-embed-large:latest
+```
+In your Kilo Code settings (see below) choose:
+* Provider: OpenAI Compatible
+* Base URL: `http://localhost:12434/engines/llama.cpp/v1`
+* API Key: _blank_
+* Model: `ai/mxbai-embed-large`
+* Dimensions: `1024`
+* Qdrant URL: `http://localhost:6333`
+* Qdrant Key: _blank_
 
 ### Production Deployment
 
